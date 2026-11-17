@@ -384,5 +384,5 @@
 
   renderTip();
   refresh();
-  timerId = setInterval(refresh, 2000);
+  timerId = setInterval(refresh, 10000);
 })();

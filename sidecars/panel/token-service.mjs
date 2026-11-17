@@ -66,6 +66,29 @@ export function inferWorkspaceFromTranscript(jsonlText) {
 
 const SUBAGENT_RE = /Created the following subagent:\s*\{\s*"conversationId":\s*"([0-9a-f-]{8,})"/gi;
 
+export function computeEfficiencyRating({ cacheHitRate = 0, uncachedInputTokens = 0, outputTokens = 0, toolCallCount = 0, stepCount = 0, errorCount = 0 }) {
+  if (stepCount === 0) return null;
+  const cacheScore = Math.min(50, (cacheHitRate / 0.9) * 50);
+  const errorRate = errorCount / stepCount;
+  const cleanScore = Math.max(0, 25 * (1 - errorRate * 4));
+  const workUnits = outputTokens + toolCallCount * 1500;
+  const workRatio = uncachedInputTokens > 0 ? workUnits / uncachedInputTokens : 1;
+  const workScore = Math.min(25, (workRatio / 0.25) * 25);
+  const score = Math.round(cacheScore + cleanScore + workScore);
+
+  let grade = 'D';
+  if (score >= 80) grade = 'A';
+  else if (score >= 65) grade = 'B';
+  else if (score >= 45) grade = 'C';
+
+  return {
+    grade,
+    score,
+    errorRate,
+    workRatio,
+  };
+}
+
 export function parseTranscriptTokens(jsonlText) {
   const turns = [];
   const promptTurns = [];
@@ -76,6 +99,8 @@ export function parseTranscriptTokens(jsonlText) {
   let inputTokens = 0;
   let outputTokens = 0;
   let cacheReadTokens = 0;
+  let totalToolCalls = 0;
+  let errorCount = 0;
 
   for (const rawLine of String(jsonlText || '').split('\n')) {
     const line = rawLine.trim();
@@ -132,6 +157,8 @@ export function parseTranscriptTokens(jsonlText) {
     inputTokens += stepUncached;
     outputTokens += stepOutput;
     cacheReadTokens += stepCache;
+    totalToolCalls += stepTools;
+    if (entry.status === 'ERROR') errorCount += 1;
 
     turns.push({
       stepIndex: typeof entry.step_index === 'number' ? entry.step_index : turns.length,
@@ -185,7 +212,17 @@ export function parseTranscriptTokens(jsonlText) {
       totalTokens,
       cacheHitRate,
       stepCount: turns.length,
+      toolCallCount: totalToolCalls,
+      errorCount,
       latestContextTokens: latestTurn ? latestTurn.inputTokens : 0,
+      rating: computeEfficiencyRating({
+        cacheHitRate,
+        uncachedInputTokens,
+        outputTokens,
+        toolCallCount: totalToolCalls,
+        stepCount: turns.length,
+        errorCount,
+      }),
     },
     turns,
     promptTurns: promptTurns.filter((p) => p.stepCount > 0),
@@ -257,6 +294,14 @@ export function getConversationUsage(appDataDir, conversationId) {
   const totalTokens = inputTokens + outputTokens;
   const cacheHitRate = inputTokens > 0 ? cacheReadTokens / inputTokens : 0;
   const subagentTokens = sub.uncachedInputTokens + sub.cacheReadTokens + sub.outputTokens;
+  const rating = computeEfficiencyRating({
+    cacheHitRate,
+    uncachedInputTokens,
+    outputTokens,
+    toolCallCount: parsed.totals.toolCallCount,
+    stepCount: parsed.totals.stepCount,
+    errorCount: parsed.totals.errorCount,
+  });
 
   return {
     conversationId: id,
@@ -271,6 +316,7 @@ export function getConversationUsage(appDataDir, conversationId) {
       uncachedInputTokens,
       totalTokens,
       cacheHitRate,
+      rating,
       subagentCount: sub.subagentCount,
       subagentTokens,
     },

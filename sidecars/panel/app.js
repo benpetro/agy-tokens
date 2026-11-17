@@ -10,6 +10,7 @@
   const el = {
     convTitleText: document.getElementById('conv-title-text'),
     convTitleLink: document.getElementById('conv-title-link'),
+    convGrade: document.getElementById('conv-grade'),
     emptyState: document.getElementById('empty-state'),
     kpiTotal: document.getElementById('kpi-total'),
     kpiSteps: document.getElementById('kpi-steps'),
@@ -40,6 +41,7 @@
     '<strong>Tip:</strong> <strong>Cached tokens</strong> are prompt tokens (system context, earlier messages, and tool outputs) reused from Gemini\'s context cache instead of being reprocessed from scratch. <strong>Cache hit rate</strong> is the share of total input served from cache (<code>cached / (new + cached)</code>)—higher means faster responses and lower quota burn.',
     '<strong>Tip:</strong> <strong>New In</strong> tokens are fresh uncached tokens sent to Gemini for that message (your prompt plus any uncached file reads, command outputs, or tool results). <strong>Output</strong> tokens are the tokens Gemini generated in its response (text, tool calls, and thinking).',
     '<strong>Tip:</strong> <strong>Tools</strong> is the number of tool calls (file reads, edits, searches, terminal commands, MCP calls, or subagents) Gemini executed while working on that message. More tool calls mean more round-trips and higher token usage.',
+    '<strong>Tip:</strong> The <strong>A–D rating</strong> scores conversation efficiency (0–100) from cache hit rate (50%), error-free steps (25%), and output + tool work achieved per uncached input token (25%).',
   ];
   let tipIndex = Math.floor(Math.random() * TIPS.length);
 
@@ -132,6 +134,17 @@
     el.convTitleText.textContent = title;
     el.convTitleText.title = title;
     el.convTitleLink.classList.toggle('hidden', !(convId && canOpenConversation()));
+
+    const rating = data.totals?.rating;
+    el.convGrade.classList.remove('grade-a', 'grade-b', 'grade-c', 'grade-d');
+    if (rating?.grade) {
+      el.convGrade.textContent = rating.grade;
+      el.convGrade.classList.add(`grade-${rating.grade.toLowerCase()}`);
+      el.convGrade.classList.remove('hidden');
+      el.convGrade.title = `Efficiency ${rating.grade} (${rating.score}/100) · ${Math.round((data.totals.cacheHitRate || 0) * 100)}% cache · ${Math.round((rating.errorRate || 0) * 100)}% errors`;
+    } else {
+      el.convGrade.classList.add('hidden');
+    }
 
     const t = data.totals || {};
     el.emptyState.classList.toggle('hidden', Boolean(data.found && t.stepCount > 0));

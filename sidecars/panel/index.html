@@ -34,8 +34,19 @@
     <!-- View 1: Single Conversation -->
     <div id="view-conv" class="view-pane">
       <div class="conv-title-row">
-        <button id="conv-title-link" type="button" class="conv-title-link" title="Open conversation in Antigravity">
-          Loading…
+        <h2 class="conv-title-heading">
+          <svg class="conv-quote-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>
+            <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/>
+          </svg>
+          <span id="conv-title-text">Loading…</span>
+        </h2>
+        <button id="conv-title-link" type="button" class="conv-ext-btn hidden" title="Open conversation in Antigravity" aria-label="Open conversation">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 3h6v6"/>
+            <path d="M10 14 21 3"/>
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          </svg>
         </button>
       </div>
 

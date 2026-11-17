@@ -8,6 +8,7 @@
   let sortDir = 'desc';
 
   const el = {
+    convTitleText: document.getElementById('conv-title-text'),
     convTitleLink: document.getElementById('conv-title-link'),
     emptyState: document.getElementById('empty-state'),
     kpiTotal: document.getElementById('kpi-total'),
@@ -113,9 +114,10 @@
 
   function renderUsage(data) {
     const convId = data.conversationId || activeConvId();
-    el.convTitleLink.textContent = data.title || 'Untitled conversation';
-    el.convTitleLink.disabled = !(convId && canOpenConversation());
-    el.convTitleLink.title = convId && canOpenConversation() ? 'Open conversation in Antigravity' : '';
+    const title = data.title || 'Untitled conversation';
+    el.convTitleText.textContent = title;
+    el.convTitleText.title = title;
+    el.convTitleLink.classList.toggle('hidden', !(convId && canOpenConversation()));
 
     const t = data.totals || {};
     el.emptyState.classList.toggle('hidden', Boolean(data.found && t.stepCount > 0));

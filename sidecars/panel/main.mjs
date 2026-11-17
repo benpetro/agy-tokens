@@ -32,6 +32,10 @@ app.page(
   '/app.js',
   () => new Response(readFileSync(join(here, 'app.js'), 'utf8'), { contentType: 'application/javascript', headers: noCacheHeaders })
 );
+app.page(
+  '/tips.js',
+  () => new Response(readFileSync(join(here, 'tips.js'), 'utf8'), { contentType: 'application/javascript', headers: noCacheHeaders })
+);
 app.api(
   '/styles.css',
   () =>

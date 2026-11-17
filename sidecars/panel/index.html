@@ -57,7 +57,10 @@
             </svg>
           </button>
         </div>
-        <span id="conv-grade" class="conv-grade hidden" title="Conversation efficiency rating"></span>
+        <div id="conv-grade-wrap" class="grade-wrap hidden">
+          <span id="conv-grade" class="conv-grade" tabindex="0" aria-describedby="conv-grade-tooltip"></span>
+          <div id="conv-grade-tooltip" class="grade-tooltip" role="tooltip"></div>
+        </div>
       </div>
 
       <div id="empty-state" class="empty-state hidden">
@@ -169,6 +172,7 @@
     </div>
   </div>
 
+  <script src="/tips.js"></script>
   <script src="/app.js"></script>
 </body>
 

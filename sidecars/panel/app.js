@@ -10,7 +10,9 @@
   const el = {
     convTitleText: document.getElementById('conv-title-text'),
     convTitleLink: document.getElementById('conv-title-link'),
+    convGradeWrap: document.getElementById('conv-grade-wrap'),
     convGrade: document.getElementById('conv-grade'),
+    convGradeTooltip: document.getElementById('conv-grade-tooltip'),
     emptyState: document.getElementById('empty-state'),
     kpiTotal: document.getElementById('kpi-total'),
     kpiSteps: document.getElementById('kpi-steps'),
@@ -37,16 +39,11 @@
     infoQuote: document.getElementById('info-quote'),
   };
 
-  const TIPS = [
-    '<strong>Tip:</strong> <strong>Cached tokens</strong> are prompt tokens (system context, earlier messages, and tool outputs) reused from Gemini\'s context cache instead of being reprocessed from scratch. <strong>Cache hit rate</strong> is the share of total input served from cache (<code>cached / (new + cached)</code>)—higher means faster responses and lower quota burn.',
-    '<strong>Tip:</strong> <strong>New In</strong> tokens are fresh uncached tokens sent to Gemini for that message (your prompt plus any uncached file reads, command outputs, or tool results). <strong>Output</strong> tokens are the tokens Gemini generated in its response (text, tool calls, and thinking).',
-    '<strong>Tip:</strong> <strong>Tools</strong> is the number of tool calls (file reads, edits, searches, terminal commands, MCP calls, or subagents) Gemini executed while working on that message. More tool calls mean more round-trips and higher token usage.',
-    '<strong>Tip:</strong> The <strong>A–D rating</strong> scores conversation efficiency (0–100) from cache hit rate (50%), error-free steps (25%), and output + tool work achieved per uncached input token (25%).',
-  ];
-  let tipIndex = Math.floor(Math.random() * TIPS.length);
+  const TIPS = Array.isArray(window.AGY_TOKEN_TIPS) ? window.AGY_TOKEN_TIPS : [];
+  let tipIndex = TIPS.length > 0 ? Math.floor(Math.random() * TIPS.length) : 0;
 
   function renderTip() {
-    if (el.infoQuote) {
+    if (el.infoQuote && TIPS.length > 0) {
       el.infoQuote.innerHTML = TIPS[tipIndex];
     }
   }
@@ -140,10 +137,15 @@
     if (rating?.grade) {
       el.convGrade.textContent = rating.grade;
       el.convGrade.classList.add(`grade-${rating.grade.toLowerCase()}`);
-      el.convGrade.classList.remove('hidden');
-      el.convGrade.title = `Efficiency ${rating.grade} (${rating.score}/100) · ${Math.round((data.totals.cacheHitRate || 0) * 100)}% cache · ${Math.round((rating.errorRate || 0) * 100)}% errors`;
+      el.convGradeWrap.classList.remove('hidden');
+      const cachePct = Math.round((data.totals.cacheHitRate || 0) * 100);
+      const errPct = Math.round((rating.errorRate || 0) * 100);
+      el.convGradeTooltip.innerHTML =
+        `<strong>Efficiency ${rating.grade} (${rating.score}/100)</strong><br>` +
+        `Scored from cache hit rate (50%), error-free steps (25%), and output + tools per uncached token (25%).<br>` +
+        `This conversation: ${cachePct}% cache · ${errPct}% errors.`;
     } else {
-      el.convGrade.classList.add('hidden');
+      el.convGradeWrap.classList.add('hidden');
     }
 
     const t = data.totals || {};

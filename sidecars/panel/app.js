@@ -25,8 +25,6 @@
     cacheRateText: document.getElementById('cache-rate-text'),
     cacheRateBar: document.getElementById('cache-rate-bar'),
     turnsBody: document.getElementById('turns-body'),
-    liveToggle: document.getElementById('live-toggle'),
-    refreshBtn: document.getElementById('refresh-btn'),
     tabConv: document.getElementById('tab-conv'),
     tabDash: document.getElementById('tab-dash'),
     viewConv: document.getElementById('view-conv'),
@@ -363,16 +361,6 @@
     }
   }
 
-  function syncPolling() {
-    if (timerId) {
-      clearInterval(timerId);
-      timerId = null;
-    }
-    if (el.liveToggle.checked) {
-      timerId = setInterval(refresh, 2000);
-    }
-  }
-
   el.tabConv.addEventListener('click', () => switchTab('conv'));
   el.tabDash.addEventListener('click', () => switchTab('dash'));
   for (const th of document.querySelectorAll('.dash-table th.sortable')) {
@@ -393,10 +381,8 @@
     tipIndex = (tipIndex + 1) % TIPS.length;
     renderTip();
   });
-  el.refreshBtn.addEventListener('click', refresh);
-  el.liveToggle.addEventListener('change', syncPolling);
 
   renderTip();
   refresh();
-  syncPolling();
+  timerId = setInterval(refresh, 2000);
 })();

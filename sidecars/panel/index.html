@@ -12,7 +12,6 @@
     <header class="topbar">
       <div class="title-group">
         <h1 class="title">Token Tracker</h1>
-        <span id="conv-badge" class="badge" title="Active conversation ID">—</span>
       </div>
       <div class="controls">
         <label class="toggle-label" title="Poll transcript every 2 seconds">
@@ -34,14 +33,10 @@
 
     <!-- View 1: Single Conversation -->
     <div id="view-conv" class="view-pane">
-      <div class="conv-picker-row">
-        <select id="conv-select" class="select" aria-label="Select conversation">
-          <option value="">Current conversation</option>
-        </select>
-        <button id="view-conv-btn" type="button" class="btn btn-secondary hidden" title="Open this conversation in Antigravity">
-          View Conversation
+      <div class="conv-title-row">
+        <button id="conv-title-link" type="button" class="conv-title-link" title="Open conversation in Antigravity">
+          Loading…
         </button>
-        <span id="updated-at" class="muted"></span>
       </div>
 
       <div id="empty-state" class="empty-state hidden">

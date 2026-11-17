@@ -160,8 +160,11 @@ async function handleUsage(data = {}) {
       (typeof data.conversationId === 'string' && data.conversationId.trim()) ||
       app.config.conversationId ||
       '';
-    const usage = getConversationUsage(appDataDir, convId);
-    const quota = await fetchQuotaStatus();
+    const [usage, quota, metaMap] = await Promise.all([
+      Promise.resolve(getConversationUsage(appDataDir, convId)),
+      fetchQuotaStatus(),
+      fetchCascadeMetadata(),
+    ]);
     let estQuotaShare = null;
 
     if (quota && usage.found && usage.totals.totalTokens > 0) {
@@ -171,7 +174,9 @@ async function handleUsage(data = {}) {
       }
     }
 
-    return { ...usage, quota, estQuotaShare };
+    const meta = metaMap.get(convId);
+    const title = meta?.summary || usage.title || 'Untitled conversation';
+    return { ...usage, title, quota, estQuotaShare };
   } catch (err) {
     return jsonError(err, 400);
   }

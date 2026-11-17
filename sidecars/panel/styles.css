@@ -365,3 +365,36 @@ body {
   font-size: 11px;
   white-space: nowrap;
 }
+
+.conv-title-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.conv-title-link {
+  border: none;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.conv-title-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.conv-title-link:disabled {
+  cursor: default;
+  color: inherit;
+  text-decoration: none;
+}

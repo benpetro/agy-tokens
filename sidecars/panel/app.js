@@ -8,9 +8,7 @@
   let sortDir = 'desc';
 
   const el = {
-    convBadge: document.getElementById('conv-badge'),
-    convSelect: document.getElementById('conv-select'),
-    updatedAt: document.getElementById('updated-at'),
+    convTitleLink: document.getElementById('conv-title-link'),
     emptyState: document.getElementById('empty-state'),
     kpiTotal: document.getElementById('kpi-total'),
     kpiSteps: document.getElementById('kpi-steps'),
@@ -25,7 +23,6 @@
     turnsBody: document.getElementById('turns-body'),
     liveToggle: document.getElementById('live-toggle'),
     refreshBtn: document.getElementById('refresh-btn'),
-    viewConvBtn: document.getElementById('view-conv-btn'),
     tabConv: document.getElementById('tab-conv'),
     tabDash: document.getElementById('tab-dash'),
     viewConv: document.getElementById('view-conv'),
@@ -116,10 +113,9 @@
 
   function renderUsage(data) {
     const convId = data.conversationId || activeConvId();
-    el.convBadge.textContent = shortId(convId);
-    el.convBadge.title = convId || 'No active conversation';
-    el.updatedAt.textContent = data.updatedAt ? `Updated ${fmtTime(data.updatedAt)}` : '';
-    el.viewConvBtn.classList.toggle('hidden', !(convId && canOpenConversation()));
+    el.convTitleLink.textContent = data.title || 'Untitled conversation';
+    el.convTitleLink.disabled = !(convId && canOpenConversation());
+    el.convTitleLink.title = convId && canOpenConversation() ? 'Open conversation in Antigravity' : '';
 
     const t = data.totals || {};
     el.emptyState.classList.toggle('hidden', Boolean(data.found && t.stepCount > 0));
@@ -237,7 +233,6 @@
       tr.title = `Inspect ${item.title || item.conversationId}`;
       tr.addEventListener('click', () => {
         selectedConvId = item.conversationId;
-        el.convSelect.value = item.conversationId;
         switchTab('conv');
       });
 
@@ -297,36 +292,6 @@
     }
   }
 
-  async function loadConversations() {
-    try {
-      const data = await fetchJson('/api/conversations');
-      const list = Array.isArray(data.conversations) ? data.conversations : [];
-      const current = activeConvId();
-      el.convSelect.innerHTML = '';
-
-      const defaultOpt = document.createElement('option');
-      defaultOpt.value = '';
-      defaultOpt.textContent = window.sidecar?.conversationId
-        ? `Active (${shortId(window.sidecar.conversationId)})`
-        : 'Select conversation…';
-      el.convSelect.appendChild(defaultOpt);
-
-      for (const item of list) {
-        const opt = document.createElement('option');
-        opt.value = item.conversationId;
-        opt.textContent = `${shortId(item.conversationId)} · ${fmtTime(item.updatedAt)}`;
-        if (selectedConvId && selectedConvId === item.conversationId) {
-          opt.selected = true;
-        } else if (!selectedConvId && item.conversationId === current) {
-          opt.textContent += ' (current)';
-        }
-        el.convSelect.appendChild(opt);
-      }
-    } catch {
-      // Non-fatal if conversation listing fails.
-    }
-  }
-
   async function refresh() {
     try {
       if (activeTab === 'dash') {
@@ -338,8 +303,8 @@
         const data = await fetchJson(`/api/usage${q}`);
         renderUsage(data);
       }
-    } catch (err) {
-      el.updatedAt.textContent = `Error: ${err.message}`;
+    } catch {
+      // Polling will retry on the next interval.
     }
   }
 
@@ -368,18 +333,10 @@
       if (lastDashData) renderDashboard(lastDashData);
     });
   }
-  el.viewConvBtn.addEventListener('click', () => openConversation(activeConvId()));
-  el.convSelect.addEventListener('change', () => {
-    selectedConvId = el.convSelect.value;
-    refresh();
-  });
-  el.refreshBtn.addEventListener('click', () => {
-    loadConversations();
-    refresh();
-  });
+  el.convTitleLink.addEventListener('click', () => openConversation(activeConvId()));
+  el.refreshBtn.addEventListener('click', refresh);
   el.liveToggle.addEventListener('change', syncPolling);
 
-  loadConversations();
   refresh();
   syncPolling();
 })();

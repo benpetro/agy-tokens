@@ -434,8 +434,19 @@ export function getDashboardSummary(appDataDir, { limit = 30, days = 7, nowMs = 
       root.totals.inputTokens += conv.totals.inputTokens;
       root.totals.outputTokens += conv.totals.outputTokens;
       root.totals.totalTokens += conv.totals.totalTokens;
+      root.totals.stepCount += conv.totals.stepCount;
+      root.totals.toolCallCount += conv.totals.toolCallCount;
+      root.totals.errorCount += conv.totals.errorCount;
       root.totals.cacheHitRate =
         root.totals.inputTokens > 0 ? root.totals.cacheReadTokens / root.totals.inputTokens : 0;
+      root.totals.rating = computeEfficiencyRating({
+        cacheHitRate: root.totals.cacheHitRate,
+        uncachedInputTokens: root.totals.uncachedInputTokens,
+        outputTokens: root.totals.outputTokens,
+        toolCallCount: root.totals.toolCallCount,
+        stepCount: root.totals.stepCount,
+        errorCount: root.totals.errorCount,
+      });
       root.totals.subagentCount += 1 + conv.totals.subagentCount;
       root.totals.subagentTokens += conv.totals.totalTokens + conv.totals.subagentTokens;
       if (conv.updatedAt > root.updatedAt) {

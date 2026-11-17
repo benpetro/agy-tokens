@@ -135,7 +135,7 @@
     const rating = data.totals?.rating;
     el.convGrade.classList.remove('grade-a', 'grade-b', 'grade-c', 'grade-d');
     if (rating?.grade) {
-      el.convGrade.textContent = rating.grade;
+      el.convGrade.textContent = `Rating: ${rating.grade}`;
       el.convGrade.classList.add(`grade-${rating.grade.toLowerCase()}`);
       el.convGradeWrap.classList.remove('hidden');
       const cachePct = Math.round((data.totals.cacheHitRate || 0) * 100);
@@ -209,6 +209,8 @@
     switch (key) {
       case 'title':
         return (item.title || '').toLowerCase();
+      case 'rating':
+        return item.totals?.rating?.score ?? -1;
       case 'updatedAt':
         return item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
       case 'tokens':
@@ -288,6 +290,18 @@
       subSpan.textContent = parts.join(' · ');
       tdName.append(titleSpan, subSpan);
 
+      const tdRating = document.createElement('td');
+      const r = item.totals?.rating;
+      if (r?.grade) {
+        const badge = document.createElement('span');
+        badge.className = `dash-grade-badge grade-${r.grade.toLowerCase()}`;
+        badge.textContent = r.grade;
+        badge.title = `Efficiency ${r.grade} (${r.score}/100)`;
+        tdRating.appendChild(badge);
+      } else {
+        tdRating.textContent = '—';
+      }
+
       const tdUpdated = document.createElement('td');
       tdUpdated.textContent = fmtDateShort(item.updatedAt);
 
@@ -328,7 +342,7 @@
         tdAction.appendChild(btn);
       }
 
-      tr.append(tdName, tdUpdated, tdTokens, tdCache, tdShare, tdLimit, tdAction);
+      tr.append(tdName, tdRating, tdUpdated, tdTokens, tdCache, tdShare, tdLimit, tdAction);
       el.dashBody.appendChild(tr);
     }
   }

@@ -1,6 +1,6 @@
 {
   "name": "agy-tokens",
-  "displayName": "AGY Tokens",
+  "displayName": "Token Tracker",
   "version": "1.0.0",
   "description": "Live Gemini token usage, cache hit rate, 5-hour quota pro-rating, and 7-day conversation comparison dashboard for Antigravity.",
   "author": {

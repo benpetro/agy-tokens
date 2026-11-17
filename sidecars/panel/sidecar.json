@@ -14,7 +14,7 @@
       {
         "path": "/",
         "entrypoint": "SIDECAR_UI_ENTRYPOINT_AUX_PANE",
-        "title": "Tokens"
+        "title": "Token Tracker"
       }
     ]
   }

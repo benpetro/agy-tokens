@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Token Tracker</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/preload.js"></script>
+</head>
+<body>
+  <div class="panel-shell">
+    <header class="topbar">
+      <div class="title-group">
+        <h1 class="title">Token Tracker</h1>
+        <span id="conv-badge" class="badge" title="Active conversation ID">—</span>
+      </div>
+      <div class="controls">
+        <label class="toggle-label" title="Poll transcript every 2 seconds">
+          <input id="live-toggle" type="checkbox" checked>
+          <span>Live</span>
+        </label>
+        <button id="refresh-btn" type="button" class="btn btn-secondary">Refresh</button>
+      </div>
+    </header>
+
+    <nav class="tab-bar" role="tablist">
+      <button id="tab-conv" type="button" class="tab-btn active" role="tab" aria-selected="true">
+        This Conversation
+      </button>
+      <button id="tab-dash" type="button" class="tab-btn" role="tab" aria-selected="false">
+        Dashboard (7d)
+      </button>
+    </nav>
+
+    <!-- View 1: Single Conversation -->
+    <div id="view-conv" class="view-pane">
+      <div class="conv-picker-row">
+        <select id="conv-select" class="select" aria-label="Select conversation">
+          <option value="">Current conversation</option>
+        </select>
+        <button id="view-conv-btn" type="button" class="btn btn-secondary hidden" title="Open this conversation in Antigravity">
+          View Conversation
+        </button>
+        <span id="updated-at" class="muted"></span>
+      </div>
+
+      <div id="empty-state" class="empty-state hidden">
+        No token data found for this conversation yet.
+      </div>
+
+      <section id="kpi-grid" class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Tokens</div>
+          <div id="kpi-total" class="kpi-value">0</div>
+          <div id="kpi-steps" class="kpi-sub">input + output</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Est. 5hr Quota</div>
+          <div id="kpi-quota-share" class="kpi-value">—</div>
+          <div id="kpi-quota-sub" class="kpi-sub">waiting for quota</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Input Tokens</div>
+          <div id="kpi-input" class="kpi-value">0</div>
+          <div id="kpi-input-sub" class="kpi-sub">0 uncached · 0 cached</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">Output Tokens</div>
+          <div id="kpi-output" class="kpi-value">0</div>
+          <div id="kpi-context-sub" class="kpi-sub">0 last context</div>
+        </div>
+      </section>
+
+      <section class="cache-bar-card">
+        <div class="cache-bar-header">
+          <span class="kpi-label">Cache Hit Rate</span>
+          <span id="cache-rate-text" class="cache-rate-value">0.0%</span>
+        </div>
+        <div class="progress-track">
+          <div id="cache-rate-bar" class="progress-fill" style="width: 0%"></div>
+        </div>
+      </section>
+
+      <section class="turns-section">
+        <div class="section-header">
+          <h2 class="section-title">Turn Breakdown</h2>
+          <span class="muted">newest first</span>
+        </div>
+        <div class="table-wrap">
+          <table class="turns-table">
+            <thead>
+              <tr>
+                <th>Message</th>
+                <th>New In</th>
+                <th>Cached</th>
+                <th>Output</th>
+                <th>Tools</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody id="turns-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- View 2: 7-Day Multi-Conversation Dashboard -->
+    <div id="view-dash" class="view-pane hidden">
+      <section class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">5hr Quota Left</div>
+          <div id="dash-quota-left" class="kpi-value">—</div>
+          <div id="dash-quota-reset" class="kpi-sub">Pro-rated from live 5hr window</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">7-Day Total Burn</div>
+          <div id="dash-total-tokens" class="kpi-value">0</div>
+          <div id="dash-conv-count" class="kpi-sub">0 conversations</div>
+        </div>
+      </section>
+
+      <section class="turns-section">
+        <div class="section-header">
+          <h2 class="section-title">Conversations Compared</h2>
+          <span class="muted">click row to inspect</span>
+        </div>
+        <div class="table-wrap">
+          <table class="turns-table dash-table">
+            <thead>
+              <tr>
+                <th class="sortable" data-sort="title">Conversation <span class="sort-ind"></span></th>
+                <th class="sortable" data-sort="updatedAt">Updated <span class="sort-ind">▼</span></th>
+                <th class="sortable" data-sort="tokens">Tokens <span class="sort-ind"></span></th>
+                <th class="sortable" data-sort="cache">Cache <span class="sort-ind"></span></th>
+                <th class="sortable" data-sort="share">7d Share <span class="sort-ind"></span></th>
+                <th class="sortable" data-sort="limit">Est. 5hr <span class="sort-ind"></span></th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="dash-body"></tbody>
+          </table>
+        </div>
+        <p class="disclaimer muted">
+          Est. Limit pro-rates your live Gemini window usage across recent conversations by total token share (Antigravity does not expose a fixed token-to-quota formula).
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

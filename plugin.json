@@ -1,0 +1,16 @@
+{
+  "name": "agy-tokens",
+  "displayName": "AGY Tokens",
+  "version": "1.0.0",
+  "description": "Live Gemini token usage, cache hit rate, 5-hour quota pro-rating, and 7-day conversation comparison dashboard for Antigravity.",
+  "author": {
+    "name": "Ben Petro",
+    "url": "https://github.com/benpetro"
+  },
+  "homepage": "https://github.com/benpetro/agy-tokens",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/benpetro/agy-tokens.git"
+  },
+  "logo": "assets/logo.svg"
+}

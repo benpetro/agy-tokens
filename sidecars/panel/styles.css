@@ -429,6 +429,7 @@ body {
   color: var(--panel-muted);
   font-size: 11px;
   line-height: 1.45;
+  cursor: pointer;
 }
 
 .info-quote strong {

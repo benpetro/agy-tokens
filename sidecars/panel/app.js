@@ -33,7 +33,21 @@
     dashTotalTokens: document.getElementById('dash-total-tokens'),
     dashConvCount: document.getElementById('dash-conv-count'),
     dashBody: document.getElementById('dash-body'),
+    infoQuote: document.getElementById('info-quote'),
   };
+
+  const TIPS = [
+    '<strong>Tip:</strong> <strong>Cached tokens</strong> are prompt tokens (system context, earlier messages, and tool outputs) reused from Gemini\'s context cache instead of being reprocessed from scratch. <strong>Cache hit rate</strong> is the share of total input served from cache (<code>cached / (new + cached)</code>)—higher means faster responses and lower quota burn.',
+    '<strong>Tip:</strong> <strong>New In</strong> tokens are fresh uncached tokens sent to Gemini for that message (your prompt plus any uncached file reads, command outputs, or tool results). <strong>Output</strong> tokens are the tokens Gemini generated in its response (text, tool calls, and thinking).',
+    '<strong>Tip:</strong> <strong>Tools</strong> is the number of tool calls (file reads, edits, searches, terminal commands, MCP calls, or subagents) Gemini executed while working on that message. More tool calls mean more round-trips and higher token usage.',
+  ];
+  let tipIndex = Math.floor(Math.random() * TIPS.length);
+
+  function renderTip() {
+    if (el.infoQuote) {
+      el.infoQuote.innerHTML = TIPS[tipIndex];
+    }
+  }
 
   function activeConvId() {
     return selectedConvId || window.sidecar?.conversationId || params.get('conversationId') || '';
@@ -346,9 +360,14 @@
     });
   }
   el.convTitleLink.addEventListener('click', () => openConversation(activeConvId()));
+  el.infoQuote?.addEventListener('click', () => {
+    tipIndex = (tipIndex + 1) % TIPS.length;
+    renderTip();
+  });
   el.refreshBtn.addEventListener('click', refresh);
   el.liveToggle.addEventListener('change', syncPolling);
 
+  renderTip();
   refresh();
   syncPolling();
 })();

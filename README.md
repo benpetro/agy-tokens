@@ -18,18 +18,34 @@ Live Gemini token usage, cache hit rate, 5-hour quota pro-rating, and a 7-day mu
 
 ## Installation
 
+### Ask Antigravity (Recommended)
+
+Open a new conversation in Antigravity and ask:
+
+> Install the plugin from https://github.com/benpetro/agy-tokens
+
 ### From Antigravity CLI
 
 ```bash
 agy plugin install https://github.com/benpetro/agy-tokens
 ```
 
-### From Antigravity UI
+### Manual (`plugins.json`)
 
-1. Open **Customizations** in the left sidebar.
-2. Choose **Install Plugin** and enter:
-   ```text
-   https://github.com/benpetro/agy-tokens
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/benpetro/agy-tokens.git ~/Code/agy-tokens
+   ```
+2. Register it in `~/.gemini/config/plugins.json`:
+   ```json
+   {
+     "entries": [
+       {
+         "path": "/Users/<your-username>/Code",
+         "include_only": ["agy-tokens"]
+       }
+     ]
+   }
    ```
 3. Open the **Tokens** panel in the right-hand auxiliary pane.
 

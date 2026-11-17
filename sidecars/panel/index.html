@@ -99,6 +99,9 @@
             <tbody id="turns-body"></tbody>
           </table>
         </div>
+        <blockquote class="info-quote">
+          <strong>Cached tokens</strong> are prompt tokens (system context, earlier messages, and tool outputs) reused from Gemini's context cache instead of being reprocessed from scratch. <strong>Cache hit rate</strong> is the share of total input served from cache (<code>cached / (new + cached)</code>)—higher means faster responses and lower quota burn.
+        </blockquote>
       </section>
     </div>
 

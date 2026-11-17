@@ -142,8 +142,8 @@
       const errPct = Math.round((rating.errorRate || 0) * 100);
       el.convGradeTooltip.innerHTML =
         `<strong>Efficiency ${rating.grade} (${rating.score}/100)</strong><br>` +
-        `Scored from cache hit rate (50%), error-free steps (25%), and output + tools per uncached token (25%).<br>` +
-        `This conversation: ${cachePct}% cache · ${errPct}% errors.`;
+        `${rating.advice}<br>` +
+        `<span style="opacity:0.75">${cachePct}% cache · ${errPct}% errors</span>`;
     } else {
       el.convGradeWrap.classList.add('hidden');
     }

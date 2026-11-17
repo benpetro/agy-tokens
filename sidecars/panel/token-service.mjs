@@ -66,26 +66,51 @@ export function inferWorkspaceFromTranscript(jsonlText) {
 
 const SUBAGENT_RE = /Created the following subagent:\s*\{\s*"conversationId":\s*"([0-9a-f-]{8,})"/gi;
 
-export function computeEfficiencyRating({ cacheHitRate = 0, uncachedInputTokens = 0, outputTokens = 0, toolCallCount = 0, stepCount = 0, errorCount = 0 }) {
+export function computeEfficiencyRating({
+  cacheHitRate = 0,
+  uncachedInputTokens = 0,
+  outputTokens = 0,
+  toolCallCount = 0,
+  stepCount = 0,
+  errorCount = 0,
+  latestContextTokens = 0,
+}) {
   if (stepCount === 0) return null;
-  const cacheScore = Math.min(50, (cacheHitRate / 0.9) * 50);
+  const cacheScore = Math.min(35, (cacheHitRate / 0.92) * 35);
   const errorRate = errorCount / stepCount;
   const cleanScore = Math.max(0, 25 * (1 - errorRate * 4));
   const workUnits = outputTokens + toolCallCount * 1500;
   const workRatio = uncachedInputTokens > 0 ? workUnits / uncachedInputTokens : 1;
-  const workScore = Math.min(25, (workRatio / 0.25) * 25);
-  const score = Math.round(cacheScore + cleanScore + workScore);
+  const workScore = Math.min(40, (workRatio / 0.3) * 40);
+
+  let bloatPenalty = 0;
+  if (uncachedInputTokens > 5_000_000) bloatPenalty += Math.min(10, Math.floor((uncachedInputTokens - 5_000_000) / 2_000_000) * 2 + 2);
+  if (latestContextTokens > 250_000) bloatPenalty += 5;
+
+  const score = Math.max(0, Math.min(100, Math.round(cacheScore + cleanScore + workScore - bloatPenalty)));
 
   let grade = 'D';
-  if (score >= 80) grade = 'A';
-  else if (score >= 65) grade = 'B';
-  else if (score >= 45) grade = 'C';
+  if (score >= 84) grade = 'A';
+  else if (score >= 68) grade = 'B';
+  else if (score >= 50) grade = 'C';
+
+  let advice = 'Lean prompt & strong cache reuse.';
+  if (errorRate > 0.05) {
+    advice = 'High step error rate — give exact file paths or constraints upfront.';
+  } else if (cacheHitRate < 0.8) {
+    advice = 'Low cache hit — keep related follow-ups in one thread to reuse cache.';
+  } else if (latestContextTokens > 250_000 || uncachedInputTokens > 5_000_000) {
+    advice = 'Context is heavy — start a fresh conversation or run /compact.';
+  } else if (workRatio < 0.15) {
+    advice = 'High uncached reads per output — point directly to target files.';
+  }
 
   return {
     grade,
     score,
     errorRate,
     workRatio,
+    advice,
   };
 }
 
@@ -222,6 +247,7 @@ export function parseTranscriptTokens(jsonlText) {
         toolCallCount: totalToolCalls,
         stepCount: turns.length,
         errorCount,
+        latestContextTokens: latestTurn ? latestTurn.inputTokens : 0,
       }),
     },
     turns,
@@ -301,6 +327,7 @@ export function getConversationUsage(appDataDir, conversationId) {
     toolCallCount: parsed.totals.toolCallCount,
     stepCount: parsed.totals.stepCount,
     errorCount: parsed.totals.errorCount,
+    latestContextTokens: parsed.totals.latestContextTokens,
   });
 
   return {
@@ -446,6 +473,7 @@ export function getDashboardSummary(appDataDir, { limit = 30, days = 7, nowMs = 
         toolCallCount: root.totals.toolCallCount,
         stepCount: root.totals.stepCount,
         errorCount: root.totals.errorCount,
+        latestContextTokens: root.totals.latestContextTokens,
       });
       root.totals.subagentCount += 1 + conv.totals.subagentCount;
       root.totals.subagentTokens += conv.totals.totalTokens + conv.totals.subagentTokens;

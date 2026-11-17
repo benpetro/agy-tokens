@@ -123,7 +123,12 @@
     el.emptyState.classList.toggle('hidden', Boolean(data.found && t.stepCount > 0));
 
     el.kpiTotal.textContent = fmt(t.totalTokens);
-    el.kpiSteps.textContent = `${fmt(data.promptTurns?.length || 0)} ${(data.promptTurns?.length || 0) === 1 ? 'message' : 'messages'}`;
+    const msgCount = data.promptTurns?.length || 0;
+    const msgLabel = `${fmt(msgCount)} ${msgCount === 1 ? 'message' : 'messages'}`;
+    el.kpiSteps.textContent =
+      t.subagentCount > 0
+        ? `${msgLabel} · +${t.subagentCount} ${t.subagentCount === 1 ? 'subagent' : 'subagents'} (${fmtCompact(t.subagentTokens)})`
+        : msgLabel;
 
     if (typeof data.estQuotaShare === 'number' && data.quota) {
       el.kpiQuotaShare.textContent = fmtPct(data.estQuotaShare, '~');
@@ -246,7 +251,12 @@
       const subSpan = document.createElement('span');
       subSpan.className = 'conv-id-sub';
       const ws = item.workspaceName || 'No workspace';
-      subSpan.textContent = item.conversationId === current ? `${ws} · active` : ws;
+      const parts = [ws];
+      if (item.conversationId === current) parts.push('active');
+      if (item.totals?.subagentCount > 0) {
+        parts.push(`${item.totals.subagentCount} ${item.totals.subagentCount === 1 ? 'subagent' : 'subagents'}`);
+      }
+      subSpan.textContent = parts.join(' · ');
       tdName.append(titleSpan, subSpan);
 
       const tdUpdated = document.createElement('td');

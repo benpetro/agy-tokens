@@ -64,9 +64,12 @@ export function inferWorkspaceFromTranscript(jsonlText) {
   return best;
 }
 
+const SUBAGENT_RE = /Created the following subagent:\s*\{\s*"conversationId":\s*"([0-9a-f-]{8,})"/gi;
+
 export function parseTranscriptTokens(jsonlText) {
   const turns = [];
   const promptTurns = [];
+  const subagentIds = new Set();
   let currentPrompt = null;
   let title = null;
   let fallbackTitle = null;
@@ -84,6 +87,12 @@ export function parseTranscriptTokens(jsonlText) {
     } catch {
       // Ignore partial or malformed trailing lines while transcript is actively written.
       continue;
+    }
+
+    if (entry.type === 'GENERIC' && typeof entry.content === 'string') {
+      for (const m of entry.content.matchAll(SUBAGENT_RE)) {
+        subagentIds.add(m[1]);
+      }
     }
 
     if (!title) {
@@ -167,6 +176,7 @@ export function parseTranscriptTokens(jsonlText) {
 
   return {
     title: title || fallbackTitle,
+    subagentIds: [...subagentIds],
     totals: {
       inputTokens: totalInputTokens,
       outputTokens,
@@ -189,6 +199,38 @@ export function getTranscriptPath(appDataDir, conversationId) {
   return join(appDataDir, 'brain', String(conversationId), '.system_generated', 'logs', 'transcript.jsonl');
 }
 
+function collectSubagentRollup(appDataDir, childIds, visited) {
+  let subagentCount = 0;
+  let uncachedInputTokens = 0;
+  let cacheReadTokens = 0;
+  let outputTokens = 0;
+
+  for (const childId of childIds) {
+    if (visited.has(childId)) continue;
+    visited.add(childId);
+    const childPath = getTranscriptPath(appDataDir, childId);
+    if (!childPath || !existsSync(childPath)) continue;
+    try {
+      const childRaw = readFileSync(childPath, 'utf8');
+      const childParsed = parseTranscriptTokens(childRaw);
+      subagentCount += 1;
+      uncachedInputTokens += childParsed.totals.uncachedInputTokens;
+      cacheReadTokens += childParsed.totals.cacheReadTokens;
+      outputTokens += childParsed.totals.outputTokens;
+
+      const nested = collectSubagentRollup(appDataDir, childParsed.subagentIds, visited);
+      subagentCount += nested.subagentCount;
+      uncachedInputTokens += nested.uncachedInputTokens;
+      cacheReadTokens += nested.cacheReadTokens;
+      outputTokens += nested.outputTokens;
+    } catch {
+      // Skip unreadable child transcripts.
+    }
+  }
+
+  return { subagentCount, uncachedInputTokens, cacheReadTokens, outputTokens };
+}
+
 export function getConversationUsage(appDataDir, conversationId) {
   const id = typeof conversationId === 'string' ? conversationId.trim() : '';
   const transcriptPath = getTranscriptPath(appDataDir, id);
@@ -204,11 +246,34 @@ export function getConversationUsage(appDataDir, conversationId) {
 
   const stat = statSync(transcriptPath);
   const raw = readFileSync(transcriptPath, 'utf8');
+  const parsed = parseTranscriptTokens(raw);
+  const visited = new Set([id]);
+  const sub = collectSubagentRollup(appDataDir, parsed.subagentIds, visited);
+
+  const uncachedInputTokens = parsed.totals.uncachedInputTokens + sub.uncachedInputTokens;
+  const cacheReadTokens = parsed.totals.cacheReadTokens + sub.cacheReadTokens;
+  const inputTokens = uncachedInputTokens + cacheReadTokens;
+  const outputTokens = parsed.totals.outputTokens + sub.outputTokens;
+  const totalTokens = inputTokens + outputTokens;
+  const cacheHitRate = inputTokens > 0 ? cacheReadTokens / inputTokens : 0;
+  const subagentTokens = sub.uncachedInputTokens + sub.cacheReadTokens + sub.outputTokens;
+
   return {
     conversationId: id,
     found: true,
     updatedAt: stat.mtime.toISOString(),
-    ...parseTranscriptTokens(raw),
+    ...parsed,
+    totals: {
+      ...parsed.totals,
+      inputTokens,
+      outputTokens,
+      cacheReadTokens,
+      uncachedInputTokens,
+      totalTokens,
+      cacheHitRate,
+      subagentCount: sub.subagentCount,
+      subagentTokens,
+    },
   };
 }
 
@@ -273,36 +338,86 @@ export function getDashboardSummary(appDataDir, { limit = 30, days = 7, nowMs = 
 
   candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
 
-  const parsed = [];
-  let totalTokens = 0;
-  let uncachedInputTokens = 0;
-  let cacheReadTokens = 0;
-  let outputTokens = 0;
+  const parsedById = new Map();
+  const childToParent = new Map();
 
-  for (const item of candidates.slice(0, limit)) {
+  for (const item of candidates.slice(0, limit * 2)) {
     try {
       const raw = readFileSync(item.transcriptPath, 'utf8');
-      const { title, totals } = parseTranscriptTokens(raw);
+      const { title, subagentIds, totals } = parseTranscriptTokens(raw);
       if (totals.stepCount === 0) continue;
 
-      totalTokens += totals.totalTokens;
-      uncachedInputTokens += totals.uncachedInputTokens;
-      cacheReadTokens += totals.cacheReadTokens;
-      outputTokens += totals.outputTokens;
+      for (const childId of subagentIds) {
+        if (childId !== item.conversationId && !childToParent.has(childId)) {
+          childToParent.set(childId, item.conversationId);
+        }
+      }
 
-      parsed.push({
+      parsedById.set(item.conversationId, {
         conversationId: item.conversationId,
         title: title || `Subagent / Background (${item.conversationId.slice(0, 8)})`,
         inferredWorkspace: inferWorkspaceFromTranscript(raw),
         updatedAt: item.updatedAt,
-        totals,
+        totals: { ...totals, subagentCount: 0, subagentTokens: 0 },
       });
     } catch {
       // Skip unreadable transcripts.
     }
   }
 
-  const conversations = parsed.map((conv) => ({
+  const findRoot = (id) => {
+    const seen = new Set([id]);
+    let cur = id;
+    while (childToParent.has(cur)) {
+      const parent = childToParent.get(cur);
+      if (seen.has(parent)) break;
+      seen.add(parent);
+      cur = parent;
+    }
+    return cur;
+  };
+
+  // Roll child subagent tokens into their root parent conversation.
+  for (const [id, conv] of parsedById.entries()) {
+    const rootId = findRoot(id);
+    if (rootId === id) continue;
+    const root = parsedById.get(rootId);
+    if (root) {
+      root.totals.uncachedInputTokens += conv.totals.uncachedInputTokens;
+      root.totals.cacheReadTokens += conv.totals.cacheReadTokens;
+      root.totals.inputTokens += conv.totals.inputTokens;
+      root.totals.outputTokens += conv.totals.outputTokens;
+      root.totals.totalTokens += conv.totals.totalTokens;
+      root.totals.cacheHitRate =
+        root.totals.inputTokens > 0 ? root.totals.cacheReadTokens / root.totals.inputTokens : 0;
+      root.totals.subagentCount += 1 + conv.totals.subagentCount;
+      root.totals.subagentTokens += conv.totals.totalTokens + conv.totals.subagentTokens;
+      if (conv.updatedAt > root.updatedAt) {
+        root.updatedAt = conv.updatedAt;
+      }
+    }
+  }
+
+  const topLevel = [];
+  let totalTokens = 0;
+  let uncachedInputTokens = 0;
+  let cacheReadTokens = 0;
+  let outputTokens = 0;
+
+  for (const [id, conv] of parsedById.entries()) {
+    if (childToParent.has(id)) continue;
+    topLevel.push(conv);
+    if (topLevel.length >= limit) break;
+  }
+
+  for (const conv of topLevel) {
+    totalTokens += conv.totals.totalTokens;
+    uncachedInputTokens += conv.totals.uncachedInputTokens;
+    cacheReadTokens += conv.totals.cacheReadTokens;
+    outputTokens += conv.totals.outputTokens;
+  }
+
+  const conversations = topLevel.map((conv) => ({
     ...conv,
     shareOfTotal: totalTokens > 0 ? conv.totals.totalTokens / totalTokens : 0,
   }));

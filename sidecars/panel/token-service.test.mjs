@@ -119,3 +119,59 @@ test('getConversationUsage and listRecentConversations read transcript.jsonl fro
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('subagent transcripts roll up into parent conversation and are hidden from dashboard', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'token-tracker-subagent-'));
+  try {
+    const parentId = 'aaaaaaaa-1111-2222-3333-444444444444';
+    const childId = 'bbbbbbbb-1111-2222-3333-444444444444';
+
+    const parentLogs = join(dir, 'brain', parentId, '.system_generated', 'logs');
+    const childLogs = join(dir, 'brain', childId, '.system_generated', 'logs');
+    mkdirSync(parentLogs, { recursive: true });
+    mkdirSync(childLogs, { recursive: true });
+
+    writeFileSync(
+      join(parentLogs, 'transcript.jsonl'),
+      [
+        JSON.stringify({ step_index: 0, type: 'USER_INPUT', content: 'Main task' }),
+        JSON.stringify({
+          step_index: 1,
+          type: 'GENERIC',
+          content: `Created the following subagent:\n{\n  "conversationId": "${childId}"\n}`,
+        }),
+        JSON.stringify({
+          step_index: 2,
+          type: 'PLANNER_RESPONSE',
+          input_tokens: 400,
+          output_tokens: 100,
+          cache_read_tokens: 0,
+        }),
+      ].join('\n') + '\n'
+    );
+
+    writeFileSync(
+      join(childLogs, 'transcript.jsonl'),
+      JSON.stringify({
+        step_index: 0,
+        type: 'PLANNER_RESPONSE',
+        input_tokens: 200,
+        output_tokens: 50,
+        cache_read_tokens: 50,
+      }) + '\n'
+    );
+
+    const usage = getConversationUsage(dir, parentId);
+    assert.equal(usage.totals.totalTokens, 800);
+    assert.equal(usage.totals.subagentCount, 1);
+    assert.equal(usage.totals.subagentTokens, 300);
+
+    const dash = getDashboardSummary(dir, { days: 7 });
+    assert.equal(dash.aggregate.conversationCount, 1);
+    assert.equal(dash.conversations[0].conversationId, parentId);
+    assert.equal(dash.conversations[0].totals.totalTokens, 800);
+    assert.equal(dash.conversations[0].totals.subagentCount, 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

@@ -187,6 +187,12 @@
       tdPrompt.title = turn.prompt || '';
       tr.appendChild(tdPrompt);
 
+      const tdModel = document.createElement('td');
+      tdModel.className = 'model-cell';
+      tdModel.textContent = turn.model || '—';
+      tdModel.title = turn.model || 'Model unavailable (not in LS memory)';
+      tr.appendChild(tdModel);
+
       const cells = [
         fmt(turn.uncachedInputTokens),
         fmt(turn.cacheReadTokens),

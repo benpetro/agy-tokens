@@ -308,6 +308,16 @@ body {
   font-weight: 500;
 }
 
+.model-cell {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--panel-muted);
+  font-size: 11px;
+  text-align: left !important;
+}
+
 .conv-title-text {
   font-weight: 600;
 }

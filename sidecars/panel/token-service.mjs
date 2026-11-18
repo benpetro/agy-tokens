@@ -162,6 +162,7 @@ export function parseTranscriptTokens(jsonlText) {
         outputTokens: 0,
         toolCallCount: 0,
         stepCount: 0,
+        stepIndices: [],
       };
       promptTurns.push(currentPrompt);
       continue;
@@ -206,10 +207,13 @@ export function parseTranscriptTokens(jsonlText) {
         outputTokens: 0,
         toolCallCount: 0,
         stepCount: 0,
+        stepIndices: [],
       };
       promptTurns.push(currentPrompt);
     }
 
+    const idx = typeof entry.step_index === 'number' ? entry.step_index : turns.length - 1;
+    currentPrompt.stepIndices.push(idx);
     currentPrompt.uncachedInputTokens += stepUncached;
     currentPrompt.cacheReadTokens += stepCache;
     currentPrompt.outputTokens += stepOutput;

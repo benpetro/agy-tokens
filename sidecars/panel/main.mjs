@@ -46,10 +46,10 @@ app.api(
   'GET'
 );
 
-async function fetchQuotaStatus() {
+async function fetchUserStatusAndModels() {
   const addr = process.env.ANTIGRAVITY_LS_ADDRESS;
   const csrf = process.env.ANTIGRAVITY_CSRF_TOKEN;
-  if (!addr || !csrf) return null;
+  if (!addr || !csrf) return { quota: null, modelLabels: new Map() };
 
   try {
     const res = await fetch(`http://${addr}/exa.language_server_pb.LanguageServerService/GetUserStatus`, {
@@ -61,26 +61,73 @@ async function fetchQuotaStatus() {
       body: '{}',
       signal: AbortSignal.timeout(2000),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return { quota: null, modelLabels: new Map() };
     const payload = await res.json();
     const configs = payload?.userStatus?.cascadeModelConfigData?.clientModelConfigs;
-    if (!Array.isArray(configs)) return null;
+    if (!Array.isArray(configs)) return { quota: null, modelLabels: new Map() };
+
+    const modelLabels = new Map();
+    for (const c of configs) {
+      const id = c?.modelOrAlias?.model;
+      if (typeof id === 'string' && typeof c?.label === 'string') {
+        modelLabels.set(id, c.label);
+      }
+    }
 
     const geminiWithQuota = configs.find(
       (c) => typeof c?.label === 'string' && c.label.includes('Gemini') && typeof c?.quotaInfo?.remainingFraction === 'number'
     );
     const anyWithQuota = geminiWithQuota || configs.find((c) => typeof c?.quotaInfo?.remainingFraction === 'number');
-    if (!anyWithQuota) return null;
+    if (!anyWithQuota) return { quota: null, modelLabels };
 
     const remainingFraction = Math.min(1, Math.max(0, anyWithQuota.quotaInfo.remainingFraction));
     return {
-      remainingFraction,
-      usedFraction: 1 - remainingFraction,
-      resetTime: anyWithQuota.quotaInfo.resetTime || null,
-      planName: payload?.userStatus?.planStatus?.planInfo?.planName || null,
+      quota: {
+        remainingFraction,
+        usedFraction: 1 - remainingFraction,
+        resetTime: anyWithQuota.quotaInfo.resetTime || null,
+        planName: payload?.userStatus?.planStatus?.planInfo?.planName || null,
+      },
+      modelLabels,
     };
   } catch {
-    return null;
+    return { quota: null, modelLabels: new Map() };
+  }
+}
+
+async function fetchQuotaStatus() {
+  const { quota } = await fetchUserStatusAndModels();
+  return quota;
+}
+
+async function fetchStepModels(convId, modelLabels) {
+  const addr = process.env.ANTIGRAVITY_LS_ADDRESS;
+  const csrf = process.env.ANTIGRAVITY_CSRF_TOKEN;
+  if (!addr || !csrf || !convId) return new Map();
+
+  try {
+    const res = await fetch(`http://${addr}/exa.language_server_pb.LanguageServerService/GetCascadeTrajectorySteps`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-codeium-csrf-token': csrf,
+      },
+      body: JSON.stringify({ cascadeId: convId }),
+      signal: AbortSignal.timeout(2000),
+    });
+    if (!res.ok) return new Map();
+    const payload = await res.json();
+    const steps = Array.isArray(payload?.steps) ? payload.steps : [];
+    const map = new Map();
+    for (let i = 0; i < steps.length; i += 1) {
+      const modelId = steps[i]?.metadata?.generatorModel;
+      if (typeof modelId === 'string' && modelId.length > 0) {
+        map.set(i, modelLabels.get(modelId) || modelId);
+      }
+    }
+    return map;
+  } catch {
+    return new Map();
   }
 }
 
@@ -164,11 +211,26 @@ async function handleUsage(data = {}) {
       (typeof data.conversationId === 'string' && data.conversationId.trim()) ||
       app.config.conversationId ||
       '';
-    const [usage, quota, metaMap] = await Promise.all([
+    const [usage, statusAndModels, metaMap] = await Promise.all([
       Promise.resolve(getConversationUsage(appDataDir, convId)),
-      fetchQuotaStatus(),
+      fetchUserStatusAndModels(),
       fetchCascadeMetadata(),
     ]);
+    const { quota, modelLabels } = statusAndModels;
+    const stepModels = usage.found ? await fetchStepModels(convId, modelLabels) : new Map();
+
+    const promptTurns = (usage.promptTurns || []).map((turn) => {
+      const models = new Set();
+      for (const idx of turn.stepIndices || []) {
+        const m = stepModels.get(idx);
+        if (m) models.add(m);
+      }
+      return {
+        ...turn,
+        model: models.size > 0 ? [...models].join(', ') : null,
+      };
+    });
+
     let estQuotaShare = null;
 
     if (quota && usage.found && usage.totals.totalTokens > 0) {
@@ -180,7 +242,7 @@ async function handleUsage(data = {}) {
 
     const meta = metaMap.get(convId);
     const title = meta?.summary || usage.title || 'Untitled conversation';
-    return { ...usage, title, quota, estQuotaShare };
+    return { ...usage, promptTurns, title, quota, estQuotaShare };
   } catch (err) {
     return jsonError(err, 400);
   }

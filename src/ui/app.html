@@ -1,33 +1,73 @@
 <!doctype html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Token Tracker</title>
-  <link rel="stylesheet" href="/styles.css">
-  <script src="/preload.js"></script>
+  <style>/* __INLINE_CSS__ */</style>
 </head>
-
 <body>
   <div class="panel-shell">
     <header class="topbar">
       <div class="title-group">
-        <h1 class="title">Token Tracker</h1>
+        <span class="title">Token Tracker</span>
       </div>
     </header>
 
     <nav class="tab-bar" role="tablist">
-      <button id="tab-conv" type="button" class="tab-btn active" role="tab" aria-selected="true">
-        This Conversation
-      </button>
-      <button id="tab-dash" type="button" class="tab-btn" role="tab" aria-selected="false">
+      <button id="tab-dash" type="button" class="tab-btn active" role="tab" aria-selected="true">
         Dashboard (7d)
+      </button>
+      <button id="tab-conv" type="button" class="tab-btn" role="tab" aria-selected="false">
+        Conversation
       </button>
     </nav>
 
-    <!-- View 1: Single Conversation -->
-    <div id="view-conv" class="view-pane">
+    <!-- View 1: 7-Day Multi-Conversation Dashboard -->
+    <div id="view-dash" class="view-pane">
+      <section class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">5hr Quota Left</div>
+          <div id="dash-quota-left" class="kpi-value">—</div>
+          <div id="dash-quota-reset" class="kpi-sub">Pro-rated from live 5hr window</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-label">7-Day Total Burn</div>
+          <div id="dash-total-tokens" class="kpi-value">0</div>
+          <div id="dash-conv-count" class="kpi-sub">0 conversations</div>
+        </div>
+      </section>
+
+      <section class="turns-section">
+        <div class="section-header">
+          <h2 class="section-title">Conversations Compared</h2>
+          <span class="muted">click row to inspect</span>
+        </div>
+        <div class="table-wrap">
+          <table class="turns-table dash-table">
+            <thead>
+              <tr>
+                <th class="sortable" data-sort="title">Conversation <span class="sort-ind"></span></th>
+                <th class="sortable" data-sort="rating">Rating <span class="sort-ind"></span></th>
+                <th class="sortable" data-sort="updatedAt">Updated <span class="sort-ind">▼</span></th>
+                <th class="sortable" data-sort="tokens">Tokens <span class="sort-ind"></span></th>
+                <th class="sortable" data-sort="cache">Cache <span class="sort-ind"></span></th>
+                <th class="sortable" data-sort="share">7d Share <span class="sort-ind"></span></th>
+                <th class="sortable" data-sort="limit">Est. 5hr <span class="sort-ind"></span></th>
+              </tr>
+            </thead>
+            <tbody id="dash-body"></tbody>
+          </table>
+        </div>
+        <p class="disclaimer muted">
+          Est. 5hr pro-rates your live Gemini 5-hour window usage across recent conversations by total token share (Antigravity does not expose a fixed token-to-quota formula).
+        </p>
+      </section>
+    </div>
+
+    <!-- View 2: Single Conversation -->
+    <div id="view-conv" class="view-pane hidden">
       <div class="conv-title-row">
         <div class="conv-title-left">
           <h1 class="conv-title-heading">
@@ -38,17 +78,8 @@
               <path
                 d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z" />
             </svg>
-            <span id="conv-title-text">Loading…</span>
+            <span id="conv-title-text">Select a conversation from Dashboard</span>
           </h1>
-          <button id="conv-title-link" type="button" class="conv-ext-btn hidden" title="Open conversation in Antigravity"
-            aria-label="Open conversation">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-              stroke-linejoin="round" aria-hidden="true">
-              <path d="M15 3h6v6" />
-              <path d="M10 14 21 3" />
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            </svg>
-          </button>
         </div>
         <div id="conv-grade-wrap" class="grade-wrap hidden">
           <span id="conv-grade" class="conv-grade" tabindex="0" aria-describedby="conv-grade-tooltip"></span>
@@ -64,7 +95,7 @@
         <div class="kpi-card">
           <div class="kpi-label">Total Tokens</div>
           <div id="kpi-total" class="kpi-value">0</div>
-          <div id="kpi-steps" class="kpi-sub">input + output</div>
+          <div id="kpi-steps" class="kpi-sub">0 messages</div>
         </div>
 
         <div class="kpi-card">
@@ -120,55 +151,8 @@
         <blockquote id="info-quote" class="info-quote" title="Click for another tip"></blockquote>
       </section>
     </div>
-
-    <!-- View 2: 7-Day Multi-Conversation Dashboard -->
-    <div id="view-dash" class="view-pane hidden">
-      <section class="kpi-grid">
-        <div class="kpi-card">
-          <div class="kpi-label">5hr Quota Left</div>
-          <div id="dash-quota-left" class="kpi-value">—</div>
-          <div id="dash-quota-reset" class="kpi-sub">Pro-rated from live 5hr window</div>
-        </div>
-
-        <div class="kpi-card">
-          <div class="kpi-label">7-Day Total Burn</div>
-          <div id="dash-total-tokens" class="kpi-value">0</div>
-          <div id="dash-conv-count" class="kpi-sub">0 conversations</div>
-        </div>
-      </section>
-
-      <section class="turns-section">
-        <div class="section-header">
-          <h2 class="section-title">Conversations Compared</h2>
-          <span class="muted">click row to inspect</span>
-        </div>
-        <div class="table-wrap">
-          <table class="turns-table dash-table">
-            <thead>
-              <tr>
-                <th class="sortable" data-sort="title">Conversation <span class="sort-ind"></span></th>
-                <th class="sortable" data-sort="rating">Rating <span class="sort-ind"></span></th>
-                <th class="sortable" data-sort="updatedAt">Updated <span class="sort-ind">▼</span></th>
-                <th class="sortable" data-sort="tokens">Tokens <span class="sort-ind"></span></th>
-                <th class="sortable" data-sort="cache">Cache <span class="sort-ind"></span></th>
-                <th class="sortable" data-sort="share">7d Share <span class="sort-ind"></span></th>
-                <th class="sortable" data-sort="limit">Est. 5hr <span class="sort-ind"></span></th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="dash-body"></tbody>
-          </table>
-        </div>
-        <p class="disclaimer muted">
-          Est. Limit pro-rates your live Gemini window usage across recent conversations by total token share
-          (Antigravity does not expose a fixed token-to-quota formula).
-        </p>
-      </section>
-    </div>
   </div>
 
-  <script src="/tips.js"></script>
-  <script src="/app.js"></script>
+  <script>/* __INLINE_JS__ */</script>
 </body>
-
 </html>

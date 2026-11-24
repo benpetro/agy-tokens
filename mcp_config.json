@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "agy-tokens": {
+      "command": "bash",
+      "args": ["${PLUGIN_ROOT}/bin/agy-tokens-server"]
+    }
+  }
+}

@@ -53,7 +53,7 @@ agy plugin install https://github.com/benpetro/agy-tokens
 
 ## How It Works
 
-- Runs as a read-only Node.js sidecar (`sidecars/panel/main.mjs`) using `sidecar_sdk`.
+- Runs as an MCP App (`mcp_config.json` -> `bin/agy-tokens-server`) built with `@modelcontextprotocol/sdk` and `@modelcontextprotocol/ext-apps`, declaring both `global` (left-sidebar **Plugins** section) and `aux_pane` (right-hand side pane) entrypoints.
 - Reads local conversation transcripts (and rolls up child subagent transcripts) from `~/.gemini/antigravity/brain/<conversationId>/.system_generated/logs/transcript.jsonl`.
 - Queries the local Antigravity Language Server (`GetUserStatus`, `GetAllCascadeTrajectories`, and `GetCascadeTrajectorySteps`) for live 5-hour quota remaining, conversation titles, workspace names, and per-step model labels.
 - All data stays local on your machine.
@@ -61,5 +61,7 @@ agy plugin install https://github.com/benpetro/agy-tokens
 ## Development & Testing
 
 ```bash
-node --test sidecars/panel/token-service.test.mjs
+npm install
+npm run build
+npm test
 ```

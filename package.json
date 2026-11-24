@@ -1,0 +1,20 @@
+{
+  "name": "agy-tokens",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:ui": "node scripts/build-ui.mjs",
+    "build:server": "esbuild src/server/index.mjs --bundle --platform=node --format=esm --target=node20 --outfile=dist/server.mjs --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
+    "build": "npm run build:ui && npm run build:server",
+    "test": "node --test src/server/token-service.test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.5",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
